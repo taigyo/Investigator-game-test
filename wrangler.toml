@@ -1,2 +1,12 @@
+name = "ai-mystery-game"
+compatibility_date = "2026-10-12"
+
+# バックエンド（Workersスクリプト）の場所を指定
+main = "functions/index.ts"
+
+# フロントエンド（HTMLなどが入ったフォルダ）の場所を指定
+[assets]
+directory = "./public"
+
 [ai]
 binding = "AI"
