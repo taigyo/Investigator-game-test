@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI洋館ミステリー - 犯人を探せ！</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #f38020; /* Cloudflare Orange */
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        header h1 {
+            margin: 0 0 8px;
+            font-size: 1.8rem;
+            color: var(--accent);
+        }
+        header p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .suspect-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .suspect-btn {
+            background-color: #0f172a;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            color: var(--text);
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+        }
+        .suspect-btn:hover {
+            border-color: var(--accent);
+        }
+        .suspect-btn.active {
+            border-color: var(--accent);
+            background-color: #262f45;
+        }
+        .suspect-name {
+            font-weight: bold;
+            font-size: 1.05rem;
+            margin-bottom: 4px;
+        }
+        .suspect-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .chat-box {
+            height: 300px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            overflow-y: auto;
+            background-color: #0f172a;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .message {
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 80%;
+            line-height: 1.4;
+            font-size: 0.95rem;
+        }
+        .message.user {
+            background-color: #f38020;
+            color: #fff;
+            align-self: flex-end;
+        }
+        .message.ai {
+            background-color: #334155;
+            color: var(--text);
+            align-self: flex-start;
+        }
+        .input-area {
+            display: flex;
+            gap: 8px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background-color: #0f172a;
+            color: var(--text);
+            font-size: 1rem;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        button.action-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button.action-btn:hover {
+            opacity: 0.9;
+        }
+        button.action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .footer-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .accusation-section {
+            border-top: 1px dashed var(--border);
+            padding-top: 16px;
+            margin-top: 16px;
+            text-align: center;
+        }
+        .accuse-btn {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .accuse-btn:hover {
+            background-color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔒 月夜の洋館ミステリー</h1>
+            <p>消えたダイヤの行方は？ 3人の容疑者を取り調べて真犯人を見つけ出せ！</p>
+        </header>
+
+        <!-- スタート画面 / ゲーム画面 -->
+        <div id="setup-screen" class="card" style="text-align: center;">
+            <h2>ゲームを開始する</h2>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">ボタンを押すと、今回の犯人がランダムに決定され事件が始まります。</p>
+            <button class="action-btn" style="padding: 12px 30px; font-size: 1.1rem;" onclick="startGame()">事件を始める 🔍</button>
+        </div>
+
+        <div id="game-screen" style="display: none;">
+            <div class="card">
+                <p style="margin-top:0; font-size: 0.9rem; color: var(--text-muted);">取り調べたい人物を選んでください：</p>
+                <div class="suspect-grid" id="suspect-grid">
+                    <!-- 動的生成 -->
+                </div>
+
+                <div class="chat-box" id="chat-box">
+                    <div class="message ai">上の容疑者を選んで、事件当時のことについて質問してみましょう。</div>
+                </div>
+
+                <div class="input-area">
+                    <input type="text" id="user-input" placeholder="例：8時の時、どこで何をしていましたか？" onkeypress="handleKeyPress(event)">
+                    <button class="action-btn" id="send-btn" onclick="sendMessage()">質問する</button>
+                </div>
+            </div>
+
+            <div class="card accusation-section">
+                <p style="margin: 0 0 12px; font-size: 0.95rem;">真相が分かったら、犯人を指名してください！</p>
+                <div style="display: flex; justify-content: center; gap: 10px;" id="accuse-buttons">
+                    <!-- 犯人指名ボタンが動的に入る -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // バックエンドのエンドポイント（ローカル開発時は 'http://localhost:8787'、デプロイ後は本番のURLに変更）
+        const API_URL = ""; // 同一オリジンの場合は空文字でOK
+
+        let gameState = null;
+        let activeSuspect = null;
+        // 各キャラのチャット履歴を保持
+        let chatHistories = {
+            butler: [],
+            painter: [],
+            detective: []
+        };
+
+        async function startGame() {
+            try {
+                const res = await fetch(API_URL + "/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "init" })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    gameState = data.gameState;
+                    
+                    // 画面切り替え
+                    document.getElementById('setup-screen').style.display = 'none';
+                    document.getElementById('game-screen').style.display = 'block';
+
+                    renderSuspects();
+                    // 初期選択を執事にする
+                    selectSuspect('butler');
+                    
+                    console.log("[DEBUG 犯人]:", data.debugCulprit); // デバッグ用
+                }
+            } catch(e) {
+                alert("ゲームの開始に失敗しました: " + e.message);
+            }
+        }
+
+        function renderSuspects() {
+            const grid = document.getElementById('suspect-grid');
+            const accuseDiv = document.getElementById('accuse-buttons');
+            grid.innerHTML = '';
+            accuseDiv.innerHTML = '';
+
+            gameState.suspects.forEach(suspect => {
+                // 選択ボタン
+                const btn = document.createElement('div');
+                btn.className = `suspect-btn ${activeSuspect === suspect.id ? 'active' : ''}`;
+                btn.id = `card-${suspect.id}`;
+                btn.onclick = () => selectSuspect(suspect.id);
+                btn.innerHTML = `
+                    <div class="suspect-name">${suspect.name}</div>
+                    <div class="suspect-title">${suspect.title}</div>
+                `;
+                grid.appendChild(btn);
+
+                // 告発ボタン
+                const accuseBtn = document.createElement('button');
+                accuseBtn.className = 'accuse-btn';
+                accuseBtn.style.backgroundColor = '#334155';
+                accuseBtn.innerText = `${suspect.name}を告発する`;
+                accuseBtn.onclick = () => accuse(suspect.id);
+                accuseDiv.appendChild(accuseBtn);
+            });
+        }
+
+        function selectSuspect(id) {
+            activeSuspect = id;
+            document.querySelectorAll('.suspect-btn').forEach(b => b.classList.remove('active'));
+            const card = document.getElementById(`card-${id}`);
+            if(card) card.classList.add('active');
+
+            renderChat();
+        }
+
+        function renderChat() {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = '';
+            
+            const history = chatHistories[activeSuspect];
+            if(history.length === 0) {
+                const target = gameState.suspects.find(s => s.id === activeSuspect);
+                chatBox.innerHTML = `<div class="message ai">「私に何か用ですか？」(${target.name}はあなたを見つめている)</div>`;
+                return;
+            }
+
+            history.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `message ${msg.role}`;
+                div.innerText = msg.content;
+                chatBox.appendChild(div);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            if(!text || !activeSuspect) return;
+
+            input.value = '';
+            chatHistories[activeSuspect].push({ role: 'user', content: text });
+            renderChat();
+
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = true;
+            sendBtn.innerText = "思考中...";
+
+            try {
+                const res = await fetch(API_URL + "/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        action: "chat",
+                        targetChar: activeSuspect,
+                        message: text,
+                        gameState: gameState
+                    })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    chatHistories[activeSuspect].push({ role: 'ai', content: data.reply });
+                } else {
+                    chatHistories[activeSuspect].push({ role: 'ai', content: "（返答に失敗しました）" });
+                }
+            } catch(e) {
+                chatHistories[activeSuspect].push({ role: 'ai', content: "（通信エラーが発生しました）" });
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerText = "質問する";
+                renderChat();
+            }
+        }
+
+        function handleKeyPress(e) {
+            if(e.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function accuse(id) {
+            const suspect = gameState.suspects.find(s => s.id === id);
+            if(id === gameState.culpritId) {
+                alert(`🎉 正解です！真犯人は ${suspect.name} でした！見事ダイヤを取り返しました！`);
+                location.reload();
+            } else {
+                alert(`❌ 残念！ ${suspect.name} は無実でした…。真犯人は別にいます！`);
+            }
+        }
+    </script>
+</body>
+</html>
