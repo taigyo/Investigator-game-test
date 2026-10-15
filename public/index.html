@@ -224,7 +224,7 @@
         async function startGame() {
             try {
                 // 明示的にカレントオリジンのルートへPOSTする
-                const res = await fetch(window.location.origin + "/", {
+                const res = await fetch(window.location.origin + "/api", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ action: "init" })
@@ -328,7 +328,7 @@
             sendBtn.innerText = "思考中...";
 
             try {
-                const res = await fetch(window.location.origin + "/", {
+                const res = await fetch(window.location.origin + "/api", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ 
