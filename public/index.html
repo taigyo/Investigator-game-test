@@ -223,12 +223,20 @@
 
         async function startGame() {
             try {
-                const res = await fetch(API_URL + "/", {
+                // 明示的にカレントオリジンのルートへPOSTする
+                const res = await fetch(window.location.origin + "/", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ action: "init" })
                 });
-                const data = await res.json();
+
+                // レスポンスのテキストを一度取得して中身を確認する
+                const text = await res.text();
+                if (!text) {
+                    throw new Error("サーバーからの応答が空です（レスポンスボディがありません）。");
+                }
+
+                const data = JSON.parse(text);
                 if(data.success) {
                     gameState = data.gameState;
                     
@@ -237,13 +245,15 @@
                     document.getElementById('game-screen').style.display = 'block';
 
                     renderSuspects();
-                    // 初期選択を執事にする
                     selectSuspect('butler');
                     
-                    console.log("[DEBUG 犯人]:", data.debugCulprit); // デバッグ用
+                    console.log("[DEBUG 犯人]:", data.debugCulprit);
+                } else {
+                    throw new Error(data.error || "不明なエラーが発生しました");
                 }
             } catch(e) {
                 alert("ゲームの開始に失敗しました: " + e.message);
+                console.error(e);
             }
         }
 
@@ -318,7 +328,7 @@
             sendBtn.innerText = "思考中...";
 
             try {
-                const res = await fetch(API_URL + "/", {
+                const res = await fetch(window.location.origin + "/", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ 
@@ -328,7 +338,8 @@
                         gameState: gameState
                     })
                 });
-                const data = await res.json();
+                const textData = await res.text();
+                const data = JSON.parse(textData);
                 if(data.success) {
                     chatHistories[activeSuspect].push({ role: 'ai', content: data.reply });
                 } else {
