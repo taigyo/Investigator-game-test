@@ -1,8 +1,5 @@
-import { Ai } from '@cloudflare/ai';
-
 interface Env {
   AI: any;
-  // セッション管理用にKVやD1を使う場合はここにバインドを追加します
 }
 
 // 3人のキャラクターのベース設定
@@ -29,7 +26,6 @@ const CHARACTERS = [
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    // CORSヘッダー（フロントエンドから呼べるようにする）
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -55,17 +51,13 @@ export default {
         gameState?: any 
       };
 
-      const ai = new Ai(env.AI);
-
       // --- アクション1: ゲームの初期化（犯人をランダムに決める） ---
       if (body.action === "init") {
         const culpritIndex = Math.floor(Math.random() * CHARACTERS.length);
         const culpritId = CHARACTERS[culpritIndex].id;
 
-        // クライアント側に返す初期状態（※実際の本格運用では犯人IDはD1やKVに隠すべきですが、まずはシンプルにいきます）
         const gameState = {
           culpritId: culpritId,
-          // 各キャラの秘密や役割
           suspects: CHARACTERS.map((char, index) => ({
             id: char.id,
             name: char.name,
@@ -76,8 +68,7 @@ export default {
 
         return new Response(JSON.stringify({ 
           success: true, 
-          message: "ゲームが開始されました。犯人はランダムに決定しました。",
-          // デバッグ用に犯人を教えちゃいますが、後で隠せます笑
+          message: "ゲームが開始されました。",
           debugCulprit: culpritId, 
           gameState 
         }), {
@@ -99,7 +90,6 @@ export default {
 
         const isCulprit = gameState.culpritId === targetChar;
 
-        // キャラクターごとの動的プロンプトの組み立て
         let roleInstruction = "";
         if (isCulprit) {
           roleInstruction = `
@@ -116,8 +106,8 @@ export default {
 
         const systemPrompt = `${target.basePrompt}\n${roleInstruction}`;
 
-        // Workers AI (Llama 3.1) の呼び出し
-        const aiResponse = await ai.run('@cf/meta/llama-3.1-8b-instruct', {
+        // 直接 env.AI.run を叩くことでパッケージ依存をなくす
+        const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: message }
